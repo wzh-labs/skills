@@ -102,6 +102,8 @@ Issue web searches and fetches in parallel — do not serialize them. 10–15 se
 - `<ticker> guidance outlook <current year>`
 - `<ticker> free cash flow margin operating income`
 - `<ticker> balance sheet debt cash`
+- `<ticker> secondary offering equity raise convertible notes debt issuance <current year>`
+- `<ticker> IPO history OR initial public offering date`
 
 **Business & strategy**
 - `<ticker> business segments revenue breakdown`
@@ -109,6 +111,10 @@ Issue web searches and fetches in parallel — do not serialize them. 10–15 se
 - `<company> CEO CFO leadership`
 - `<ticker> M&A acquisition partnership <current year>`
 - `<ticker> investor day presentation`
+
+**People & operations**
+- `<company> employee count headcount <current year>`
+- `<company> layoffs hiring workforce <current year>`
 
 **Industry & competition**
 - `<company> market share competitors <current year>`
@@ -198,6 +204,15 @@ buyback:
   authorized_usd: null
   ttm_usd: null
 
+capital_raises:                       # secondary offerings, debt, convertibles since IPO
+  ipo_date: null
+  ipo_price_usd: null
+  recent:
+    - type: null                      # secondary-offering | debt | convertible | other
+      date: null
+      amount_usd: null
+      notes: null
+
 executives:
   - name: Sundar Pichai
     role: CEO
@@ -205,6 +220,11 @@ executives:
   - name: Anat Ashkenazi
     role: CFO
     since: 2024
+
+headcount:
+  value: null
+  as_of: null
+  source: null                        # press-release | SEC-filing | linkedin | self-reported
 
 analyst_consensus:
   rating: Buy                       # Strong Buy | Buy | Hold | Underperform | Sell
@@ -250,9 +270,10 @@ What the company does, revenue breakdown by segment, geographic mix, pricing mod
 
 Guidance for next period. Balance sheet highlights (cash, debt, net cash position).
 Capital return (dividend yield, buyback authorization and pace).
+Capital raises: IPO date/price, any secondary offerings, debt issuances, or convertible notes since IPO.
 
 ## Management
-CEO, CFO, and key operational leaders. Tenure, prior-company signal, any recent changes.
+CEO, CFO, and key operational leaders. Tenure, prior-company signal, any recent changes. Headcount (value, as-of date, source) and any notable workforce trends (layoffs, hiring plans).
 
 ## Competitive position & moat
 Named competitors. Market share where available. Durable advantages (network effects, switching costs, scale, IP, regulatory moat). Positioning vs. peers.
@@ -281,8 +302,8 @@ Prepend to `changelog.md`:
 ## <YYYY-MM-DD>
 - **Earnings:** <quarter, beat/miss on revenue and EPS, key metrics>
 - **Guidance:** <updated guidance vs. prior, if changed>
-- **Financials:** <material changes to margin, FCF, balance sheet>
-- **Management:** <hires, departures, role changes>
+- **Financials:** <material changes to margin, FCF, balance sheet, capital raises>
+- **Management:** <hires, departures, role changes, headcount prev → curr>
 - **Strategy:** <M&A, new products, pivots, investor day highlights>
 - **Analyst:** <consensus shift, notable upgrades/downgrades, target changes>
 - **Industry:** <material macro or sector developments affecting the company>

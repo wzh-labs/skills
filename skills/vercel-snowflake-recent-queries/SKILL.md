@@ -13,6 +13,7 @@ Required: none (all have defaults)
 
 Optional:
 - `N` — number of queries to show (default 20, max 200)
+- `user` — case-insensitive substring filter on USER_NAME (e.g. `thomas` matches `THOMAS.WANG@VERCEL.COM`)
 
 ## Source selection
 
@@ -42,17 +43,22 @@ SELECT
   START_TIME,
   TOTAL_ELAPSED_TIME / 1000.0        AS duration_sec,
   ROWS_PRODUCED,
-  ROWS_SCANNED,
   BYTES_SCANNED / 1024.0 / 1024.0   AS mb_scanned,
   ERROR_CODE,
   ERROR_MESSAGE
-FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY(
-  END_TIME_RANGE_START => DATEADD('day', -7, CURRENT_TIMESTAMP()),
+FROM TABLE(DWH_PROD.INFORMATION_SCHEMA.QUERY_HISTORY(
   RESULT_LIMIT => <N>
 ))
+WHERE CONTAINS(UPPER(USER_NAME), UPPER('<user>'))   -- omit this line when no user filter provided
 ORDER BY START_TIME DESC
 LIMIT <N>;
 ```
+
+Notes on this query:
+- Must use a fully qualified database prefix (`DWH_PROD.INFORMATION_SCHEMA`) — bare `INFORMATION_SCHEMA.QUERY_HISTORY` fails with a compilation error.
+- Do NOT pass `END_TIME_RANGE_START` — even `DATEADD('day', -7, ...)` trips Snowflake's boundary guard ("Cannot retrieve data from more than 7 days ago"). Omit it and rely solely on `RESULT_LIMIT`.
+- `ROWS_SCANNED` does not exist in this instance's view — use `BYTES_SCANNED` only.
+- When a `user` filter is provided, add `WHERE CONTAINS(UPPER(USER_NAME), UPPER('<user>'))` after the `TABLE(...)` clause. Because the function returns recent rows before filtering, always use `RESULT_LIMIT => 10000` (the maximum) so the post-filter still yields N rows on busy accounts. Omit the WHERE clause entirely when no user filter is given.
 
 **Fallback query (ACCOUNT_USAGE, >7 days):**
 
@@ -68,12 +74,12 @@ SELECT
   START_TIME,
   TOTAL_ELAPSED_TIME / 1000.0        AS duration_sec,
   ROWS_PRODUCED,
-  ROWS_SCANNED,
   BYTES_SCANNED / 1024.0 / 1024.0   AS mb_scanned,
   ERROR_CODE,
   ERROR_MESSAGE
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE START_TIME >= DATEADD('day', -90, CURRENT_TIMESTAMP())
+  AND CONTAINS(UPPER(USER_NAME), UPPER('<user>'))   -- omit this line when no user filter provided
 ORDER BY START_TIME DESC
 LIMIT <N>;
 ```
@@ -94,7 +100,7 @@ Truncate QUERY_TEXT to 120 characters in the table view. Show the full text when
 ## Output format
 
 ```
-## Recent Snowflake Queries  (N=<n> · source: INFORMATION_SCHEMA · as of <timestamp>)
+## Recent Snowflake Queries  (N=<n> · user: <user filter or "all"> · source: INFORMATION_SCHEMA · as of <timestamp>)
 
 | # | Started (UTC)        | Duration | Status  | Type   | User         | Warehouse | Rows out | Query (truncated)                          |
 |---|----------------------|----------|---------|--------|--------------|-----------|----------|--------------------------------------------|
@@ -114,6 +120,7 @@ Rules:
 - Flag failed queries with a `FAILED` status — do not silently skip them.
 - Show the summary line (failed count, slowest, total rows) only when N ≥ 5.
 - Show query_id in the summary line so the user can look it up in Snowflake UI.
+- **RUNNING queries have negative `TOTAL_ELAPSED_TIME`** — Snowflake sets this relative to epoch while a query is in flight. Show `—` for duration on any row where `EXECUTION_STATUS = 'RUNNING'` or `duration_sec < 0`. Exclude these rows from the "slowest" summary stat.
 
 ## Style rules
 

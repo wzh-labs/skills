@@ -22,4 +22,24 @@ for skill_dir in "$SKILLS_SRC"/*/; do
   fi
 done
 
+ALIASES_SRC="$REPO_DIR/shell/aliases.sh"
+ALIASES_DEST="$HOME/.bread-n-butter-aliases.sh"
+ZSHRC="$HOME/.zshrc"
+SOURCE_LINE="source \"$ALIASES_DEST\""
+
+if [[ -L "$ALIASES_DEST" ]]; then
+  echo "update  aliases"
+  ln -sfn "$ALIASES_SRC" "$ALIASES_DEST"
+elif [[ -e "$ALIASES_DEST" ]]; then
+  echo "skip    aliases (exists, not a symlink)"
+else
+  echo "install aliases"
+  ln -s "$ALIASES_SRC" "$ALIASES_DEST"
+fi
+
+if [[ -f "$ZSHRC" ]] && ! grep -Fxq "$SOURCE_LINE" "$ZSHRC"; then
+  echo "install aliases source line in $ZSHRC"
+  printf '\n# bread-n-butter aliases\n%s\n' "$SOURCE_LINE" >> "$ZSHRC"
+fi
+
 echo "done"

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+alias gs="git status"
+alias gb="git branch"
+alias gp="git pull"
+alias gf="git fetch"
+alias gpu="git push"
+alias ga="git add"
+alias gc="git commit"
+alias gcm="git commit -m"
+alias gco="git checkout"
+alias gsw="git switch"
+alias gd="git diff"
+alias gds="git diff --staged"
+alias gl="git log"
+alias glo="git log --oneline"
+alias gst="git stash"

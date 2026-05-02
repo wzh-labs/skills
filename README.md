@@ -12,6 +12,7 @@ This will:
 
 - Symlink each directory in [skills/](skills/) into `~/.claude/skills/`.
 - Symlink [shell/aliases.sh](shell/aliases.sh) to `~/.bread-n-butter-aliases.sh` and add a `source` line to `~/.zshrc` (idempotent).
+- Copy [iterm/com.googlecode.iterm2.plist](iterm/com.googlecode.iterm2.plist) to `~/Library/Preferences/com.googlecode.iterm2.plist` (overwrites existing).
 
 After install, run `source ~/.zshrc` to pick up the aliases in your current shell.
 

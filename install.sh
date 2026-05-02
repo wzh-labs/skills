@@ -42,4 +42,14 @@ if [[ -f "$ZSHRC" ]] && ! grep -Fxq "$SOURCE_LINE" "$ZSHRC"; then
   printf '\n# bread-n-butter aliases\n%s\n' "$SOURCE_LINE" >> "$ZSHRC"
 fi
 
+ITERM_PLIST_SRC="$REPO_DIR/iterm/com.googlecode.iterm2.plist"
+ITERM_PLIST_DEST="$HOME/Library/Preferences/com.googlecode.iterm2.plist"
+
+if [[ -e "$ITERM_PLIST_DEST" ]]; then
+  echo "update  iterm plist"
+else
+  echo "install iterm plist"
+fi
+cp "$ITERM_PLIST_SRC" "$ITERM_PLIST_DEST"
+
 echo "done"

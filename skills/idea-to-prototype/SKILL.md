@@ -1,19 +1,19 @@
 ---
 name: idea-to-prototype
-description: Turn a rough product idea into a concrete, Vercel-flavored implementation plan via structured Q&A. Grills the user one question at a time, logs every answer, then writes an implementation plan grounded in their actual constraints. Use when the user says "I have an idea for…", "let's prototype…", "build me a quick prototype of…", "/idea-to-prototype <pitch>", or otherwise wants to flesh out a concept before any code is written. Default stack is Vercel (Next.js + Vercel CLI assumed installed) — diverge only when the user explicitly asks.
+description: Turn a rough product idea into a concrete, Vercel-flavored implementation plan via structured Q&A. Reads the pitch from an `IDEA.md` file the user has already authored in the current working directory — the skill takes no arguments. Grills the user one question at a time, logs every answer, then writes an implementation plan grounded in their actual constraints. Use when the user says "I have an idea for…", "let's prototype…", "build me a quick prototype of…", "/idea-to-prototype", or otherwise wants to flesh out a concept before any code is written. Default stack is Vercel (Next.js + Vercel CLI assumed installed) — diverge only when the user explicitly asks.
 ---
 
 # Idea to prototype
 
 Goal: take a rough idea and turn it into a *runnable* implementation plan. The path is always:
 
-1. Capture the idea verbatim.
+1. **Read the idea from `IDEA.md`** in the current working directory — the user authors that file before invoking the skill. The skill itself takes no arguments and never accepts a pitch over chat.
 2. **Research first**: do a structured web + platform-skill sweep and write `RESEARCH.md`. Findings shape every Q&A proposal that follows.
 3. **Interrogate the user, one question at a time**, logging each answer as it comes in. Proposals are grounded in the research, not generic.
 4. Write a concrete `PLAN.md` grounded in the research and the answers.
 5. Stop. Wait for explicit go-ahead before writing any product code.
 
-The skill produces three artifacts (`RESEARCH.md`, `QNA.md`, and `PLAN.md`). It does **not** scaffold the prototype itself — that's a separate step that only happens after the user approves the plan.
+The skill produces three artifacts (`RESEARCH.md`, `QNA.md`, and `PLAN.md`) alongside the user-authored `IDEA.md`. It does **not** scaffold the prototype itself — that's a separate step that only happens after the user approves the plan.
 
 Default stack assumption: **Vercel** (Next.js App Router on Vercel, Vercel CLI already on the machine). Apply Vercel-native choices unless the user explicitly steers elsewhere.
 
@@ -35,12 +35,20 @@ When the human-facing answer to a question conflicts with these properties, the 
 
 ## Phase 0 — Setup (silent, fast)
 
-1. **Slug the idea**: kebab-case, ≤ 5 words. Derive from the user's pitch. If the pitch is one word, append a date (`weather-2026-05`).
-2. **Pick a workspace**:
-   - Default: `~/prototypes/<slug>/`.
+The skill takes **no arguments**. The pitch lives in `IDEA.md` in the current working directory — the user is responsible for authoring it before invoking the skill.
+
+1. **Locate `IDEA.md`.** Look for `./IDEA.md` (relative to the current working directory). Do not search elsewhere, do not synthesize one from chat history, do not ask the user to paste the pitch into chat.
+2. **If `IDEA.md` is missing or empty**, stop the skill immediately and tell the user something like:
+   > I couldn't find an `IDEA.md` in the current directory (or it's empty). Create one with your pitch — even a couple of sentences is fine — then re-invoke the skill. I won't accept the pitch over chat; the file is the source of truth.
+   Do not proceed to Phase 1 until the file exists with content.
+3. **Read `IDEA.md` verbatim** and treat its contents as the canonical pitch. Never rewrite it, never "clean it up" — Phases 1–3 reference this file as-is.
+4. **Slug the idea**: kebab-case, ≤ 5 words, derived from the contents of `IDEA.md` (a title line if present, otherwise the first sentence). If the slug would be one word, append the current month (`weather-2026-05`).
+5. **Pick a workspace**:
+   - Default: the current working directory itself, *if* it looks empty/scratch (no other code, no `package.json`). The user typed `IDEA.md` here for a reason.
+   - Otherwise: `~/prototypes/<slug>/`. Move/copy `IDEA.md` into that workspace as the first step.
    - If the user already mentioned an existing repo, use that path instead.
-   - Confirm the path with the user in a single AskUserQuestion call before creating anything. This is the *only* place you may bundle the path question with another question.
-3. **Create the workspace**, write `IDEA.md` containing the user's original pitch verbatim (no editorialization), and initialize `QNA.md` with a header:
+   - Confirm the chosen path with the user in chat before creating anything new. State the proposed path, ask if it's good, wait for a yes.
+6. **Initialize `QNA.md`** in the workspace with a header:
 
    ```
    # Q&A — <Idea Name>
@@ -53,7 +61,7 @@ Before any question is asked, do a structured research pass on the idea and writ
 
 ### Inputs
 
-`IDEA.md` (the user's verbatim pitch) and the slug. Nothing else.
+`IDEA.md` (the user-authored pitch in the workspace) and the slug. Nothing else — in particular, do not consult chat history for additional pitch detail; if it's not in `IDEA.md`, treat it as unspecified and let the Q&A surface it.
 
 ### Method
 
@@ -129,9 +137,22 @@ Before moving on, output a **one-line summary to the user**: *"Research saved to
 
 ## Phase 2 — Interrogation
 
-**Hard rule: exactly one question per `AskUserQuestion` call.** Never bundle questions. Never sneak a follow-up into the same turn. Wait for the answer, log it, then form the next question.
+**Style: conversational, not form-filling.** Ask questions in plain chat — no `AskUserQuestion` tool, no multiple-choice widget. The user prefers a back-and-forth conversation. You still write the question, the user still types a reply.
 
-**Style rule: propose, don't open-end.** Each question should feel like a quick "yes / pick one" rather than an essay prompt. The agent has done the thinking — it offers 2–4 *concrete, opinionated, mutually exclusive* options and labels the most likely one **(Recommended)** as the first option. Every option must be specific enough to act on (good: `Vercel Postgres with table tasks(id uuid, title text, status enum, createdAt timestamptz)` — bad: `use a database`). The user's job is to confirm or redirect, not to design from scratch. Free-text via "Other" stays available as the escape hatch when the proposals genuinely don't fit.
+**Hard rule: one question per turn.** Never bundle questions. Never sneak a follow-up into the same message. Send one question, wait for the answer, log it, then send the next. If you catch yourself writing "and also…" or numbering sub-questions, split them into separate turns.
+
+**Hard rule: keep asking until every wrinkle is ironed out.** The goal is *zero ambiguity* in `PLAN.md`. There is no soft cap on question count — if a flow, a field, a contract, or a UX state is still open to interpretation, ask another question. It is far cheaper to ask one more clarifier now than to ship a plan that quietly papered over a fork. Volume is fine; vagueness is not. The user signed up for an interrogation — be thorough.
+
+**Style rule: propose, don't open-end.** Each question should feel like a quick "yes / pick one" rather than an essay prompt. You've done the thinking — offer 2–4 *concrete, opinionated, mutually exclusive* options inline, and mark the most likely one **(Recommended)**. Format the choices as a short labeled list the user can answer with "A" / "the second one" / "let's do Postgres". Every option must be specific enough to act on (good: `Vercel Postgres with table tasks(id uuid, title text, status enum, createdAt timestamptz)` — bad: `use a database`). The user's job is to confirm or redirect, not to design from scratch. They can always free-text a different answer; that's expected, not an exception.
+
+Example shape of a single conversational question:
+
+> **Q3 — Empty state.** What does the screen show before the user has created any tasks?
+> - **A) (Recommended)** Empty list with a single CTA button "Create your first task" centered.
+> - **B)** Three pre-seeded example tasks the user can edit or delete.
+> - **C)** The create form is the empty state — no list view until the first task exists.
+>
+> Pick A/B/C, or describe a different shape.
 
 **Style rule: ground every proposal in `RESEARCH.md`.** When the proposed options come from a research finding (a prior-art pattern, a current SDK behavior, a known pitfall to avoid), reference it briefly in the option's `description` — e.g. "Mirrors how <product> handles this, see RESEARCH.md §Prior art." Recommendations should *flow from* the research, not from generic intuition. If a proposal contradicts a research finding, say so explicitly and explain why.
 
@@ -141,9 +162,11 @@ After every answer, append to `QNA.md`:
 
 ```
 ## Q<n>: <full question text>
-_<header chip>_
+_<short topic tag — e.g. "empty state", "auth boundary">_
 
-**Answer:** <the option label the user picked, plus any free-text "Other" content verbatim>
+**Options offered:** <A/B/C labels with one-line summaries, if you proposed any>
+
+**Answer:** <what the user said, verbatim if short, paraphrased faithfully if long — preserve the intent>
 
 **Why this matters:** <one sentence on what this answer changes about the plan>
 ```
@@ -158,9 +181,9 @@ The goal is **zero ambiguity at implementation time**. Cheap, high-level questio
 
 Rough order: pitch & audience (≤1 question) → user flow drill-down (the bulk) → data & contracts → tech specifics.
 
-#### Tier 1 — Pitch & audience (1 question max)
+#### Tier 1 — Pitch & audience (0–1 questions)
 
-1. **Pitch + audience combined** — "In one sentence, what is this and who's it for?" Free-text via Other. Skip entirely if the user's invocation already answered this.
+1. **Audience clarifier (only if `IDEA.md` doesn't say)** — `IDEA.md` is the pitch; do not re-ask "what is this." If the file already names the intended user (e.g. "for solo founders", "for our oncall team"), skip this tier entirely. If audience is genuinely missing, ask one targeted question: "Who's the primary user — `(A)` just you, `(B)` a small known group (≤10 people), or `(C)` public/anyone-with-the-link?" Nothing more in this tier.
 
 #### Tier 2 — User flow (the core of the Q&A — most questions live here)
 
@@ -199,9 +222,19 @@ Walk the user through the prototype as if narrating a screen recording. Each que
 
 ### When to stop
 
-You have enough when you can write *every* section of `PLAN.md` — especially **User flow**, **Data model**, and **Architecture → Server Actions / API routes** — without writing a single `???` or "TBD". If you can't yet describe the success screen, the empty state, the data fields, and the API contract concretely, you don't have enough — keep asking.
+You have enough when you can write *every* section of `PLAN.md` — especially **User flow**, **Data model**, **Architecture → Server Actions / API routes**, **Agent surface**, and **Verification plan** — without writing a single `???`, "TBD", "probably", "something like", or "the usual". If any of those phrases shows up in the draft you're holding in your head, you are not done — keep asking.
 
-Conversely, if you find yourself asking purely confirmatory questions ("so just to confirm…"), stop and go to Phase 3.
+Before declaring Q&A complete, run an explicit **ambiguity audit**:
+
+1. Mentally draft `PLAN.md` end-to-end from the answers in `QNA.md`.
+2. For every concrete sentence, ask: *could a competent engineer read this and ship two materially different implementations?* If yes, that's an ambiguity — ask another question.
+3. Walk the user flow as a screen recording in your head. For every screen, every state transition, every error branch — is the exact UX pinned down? If you'd have to invent the empty-state copy, the loading affordance, or the error message yourself, ask.
+4. For every data field, ask: do I know its type, nullability, default, validation rule, and where it's set? If not, ask.
+5. For every API/Server Action, ask: do I know its full input schema, full output schema, error shape, and idempotency guarantees? If not, ask.
+6. For every external integration: do I know the exact endpoint, auth mechanism, rate limits, and failure handling? If not, ask (or flag explicitly as a known unknown the plan must surface).
+7. For every "(defaulted)" choice you'd otherwise make: did the user actually punt on this, or did you just not ask? If you didn't ask, ask.
+
+Only when the audit produces no new questions are you done. Confirmatory questions ("so just to confirm…") at that point are fine to skip — but the bar is *no remaining ambiguity*, not *I'm tired of asking*.
 
 ## Phase 3 — Plan
 
@@ -316,9 +349,10 @@ Before scaffolding, **verify current versions** of any of these via web search �
 
 ## Style rules
 
-- **One question per `AskUserQuestion` call.** This is non-negotiable.
+- **Conversational, not form-driven.** Ask in plain chat. Do not use `AskUserQuestion`.
+- **One question per turn.** Non-negotiable. If you have a follow-up, send it after the answer arrives.
 - **Questions are specific and answerable.** Bad: "What's the architecture?" Good: "Does the data need to survive a page refresh?"
-- **Prefer multi-choice options** in `AskUserQuestion` so answers are unambiguous. Free-text via "Other" is the escape hatch, not the default.
+- **Always propose concrete options inline** (A/B/C with one-line descriptions, **(Recommended)** on the most likely). Free-form replies are welcome but the proposals do most of the work.
 - **Never assume an unanswered question.** If you must default, label it `(defaulted)` in the plan.
 - **Keep QNA.md accurate.** Edit prior entries on revision rather than appending contradictions.
 - **The plan is a hypothesis.** Call out the riskiest assumption explicitly so the user can challenge it before code is written.
@@ -328,5 +362,5 @@ Before scaffolding, **verify current versions** of any of these via web search �
 - Don't write product code in this skill. The deliverable is the plan.
 - Don't lecture about prototyping methodology or "lean MVP" theory.
 - Don't pad the plan with generic boilerplate (no "Conclusion", no "Considerations", no aspirational roadmap).
-- Don't ask 15 questions when 7 will do. Stop the moment the plan is unambiguous.
+- Don't truncate the Q&A to feel efficient. Ask as many questions as it takes — 7, 15, 30 — until the ambiguity audit produces nothing new. An over-thorough Q&A is a feature, not a bug; a vague plan is the failure mode to avoid.
 - Don't claim the prototype "works" later just because the plan compiles in your head — verification per global CLAUDE.md applies once code exists.

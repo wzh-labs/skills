@@ -25,7 +25,7 @@ What "agent-usable" means concretely:
 
 - **Every meaningful action is callable as a typed API**, not only as a button click. Server Actions, route handlers, or MCP tools — pick one — but never bury logic so deep in client UI that an agent can't reach it.
 - **Inputs and outputs are JSON with explicit schemas** (Zod / TypeScript types). Avoid HTML-scraping-only surfaces. If the human UI streams Markdown, the agent surface returns structured data.
-- **Auth supports machine credentials** when auth exists at all. **Default to OIDC** — one protocol covers both the browser authorization-code flow for humans and the `client_credentials` flow for agents, with short-lived bearer tokens that work identically against the same routes. Fall back to API keys only when OIDC is genuinely overkill (e.g. "just me" prototypes).
+- **Auth supports machine credentials** when auth exists at all. Default split: **Okta OIDC for humans** (authorization-code flow) and **Vercel OIDC for M2M** (Vercel-minted, short-lived JWTs that workloads receive automatically and present to receivers; receivers verify against Vercel's published JWKS). Both flows reduce to a bearer token validated by the same JWT-verifying middleware on every protected route — branching only on the `iss` claim to pick the correct JWKS. Static API keys are the fallback for non-Vercel-hosted callers and "just me" prototypes only.
 - **Server is the source of truth.** No critical state lives only in client components. An agent that hits the API directly should see exactly what the human sees.
 - **Operations are idempotent where possible**, with explicit IDs the agent can supply, so retries are safe.
 - **Discoverable surface**: list/index endpoints exist (e.g. `GET /api/items`), not just deep links. An agent should be able to enumerate before it acts.
@@ -184,7 +184,7 @@ Walk the user through the prototype as if narrating a screen recording. Each que
 
 #### Tier 4 — Tech specifics
 
-14. **Auth boundary (humans + agents)** — Which routes/actions are protected vs public? *And* how does an AI agent authenticate? Propose, in order of preference: (a) **OIDC via Clerk/Auth0/Descope — auth-code flow for humans, `client_credentials` flow for agents, same bearer-token middleware on every protected route (Recommended for anything multi-user or shared)**, (b) no auth (only for "just me, localhost / private preview"), (c) static API key in a header (only when an OIDC provider is genuinely too heavy), (d) public read + OIDC-gated write. Verify the chosen provider's current Vercel Marketplace availability before committing.
+14. **Auth boundary (humans + machines)** — Which routes/actions are protected vs public? *And* how do humans and machines each authenticate? Propose, in order of preference: (a) **Okta OIDC for humans (auth-code flow) + Vercel OIDC for M2M (Vercel-minted JWT, verified against Vercel's JWKS) — same JWT middleware on every protected route, branching on the `iss` claim (Recommended for anything multi-user, shared, or agent-callable)**, (b) no auth (only for "just me, localhost / private preview"), (c) Okta OIDC for humans + static API key for non-Vercel-hosted machine callers (only when the caller can't run on Vercel), (d) public read + Okta-gated write. The implementing agent must verify current Okta and Vercel OIDC behavior via `vercel:auth` and `vercel:env-vars` before scaffolding — JWKS URLs, audience defaults, and token claims evolve.
 15. **Agent surface shape** — How will an agent interact with the prototype? Propose: (a) typed Server Actions also exposed as `/api/*` route handlers with Zod-validated JSON I/O **(Recommended)**, (b) an MCP server fronting the same operations, (c) a published OpenAPI spec, (d) all of the above. Pick the minimum that lets a Claude/agent client read state and trigger the core action without scraping HTML.
 16. **Tech non-negotiables** — Anything you must use or must NOT use? (framework, language, DB, AI model, existing component library, existing repo to extend)
 17. **Deployment target** — localhost only / Vercel preview URL shared with N people / public production deploy. Custom domain?
@@ -244,7 +244,12 @@ For every line, mark `(explicit)` if the user said so or `(defaulted)` if you ch
 ## Agent surface (AI-Agent-First)
 Even if humans are the day-1 users, an AI agent must be able to drive the prototype. List:
 - **Operations exposed to agents:** for each core action, the typed entry point (Server Action *and* `POST /api/...` route, or MCP tool) — including input/output schema.
-- **Authentication (humans + agents):** the OIDC provider, the issuer URL, the audience, and which flow each caller uses (auth-code for humans, `client_credentials` for agents). Where the agent credential lives (env var names: `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_ISSUER`, `OIDC_AUDIENCE`). If OIDC is *not* used (e.g. "just me"), state that explicitly and justify.
+- **Authentication (humans + machines):**
+  - **Humans — Okta OIDC, auth-code flow.** Issuer URL, audience, and env var names: `OKTA_ISSUER`, `OKTA_AUDIENCE`, `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET`.
+  - **M2M — Vercel OIDC.** Caller (Vercel-hosted) presents its Vercel-minted JWT (env var name as confirmed via `vercel:env-vars`, typically `VERCEL_OIDC_TOKEN`); receiver verifies against Vercel's JWKS with pinned `iss` and `aud`.
+  - **Shared verifier middleware** keyed on the `iss` claim — one route, two acceptable issuers.
+  - **Non-Vercel-hosted machine callers** (if any): state explicitly how they authenticate (static API key header, named env var) and why Vercel OIDC isn't usable for them.
+  - If OIDC is *not* used (e.g. "just me"), state that explicitly and justify.
 - **Discovery:** the index/list endpoints an agent can call to enumerate state before acting (e.g. `GET /api/tasks`).
 - **Observability:** how an agent confirms a side effect succeeded (response body / event log endpoint / webhook).
 - **Idempotency:** which mutating operations accept a client-supplied ID for safe retry, and which don't (with rationale).
@@ -298,7 +303,11 @@ Apply this stack and label each choice `(defaulted)` in `PLAN.md`. Every default
 - Tailwind v4 + shadcn/ui (only if UI is non-trivial)
 - Vercel Postgres for relational, Vercel KV for ephemeral key-value, Vercel Blob for files
 - **Every Server Action is also exposed as a `route.ts` POST handler** with a Zod-validated JSON contract — so agents can call it without a browser session
-- No auth if "just me, localhost-only"; otherwise **OIDC via a Vercel Marketplace provider** (Clerk by default, Auth0 or Descope when the user has prior preference) — auth-code flow for humans, `client_credentials` flow for agents, validated by the same JWT-verifying middleware on every protected route. Token audience and issuer pinned to env vars. Static API keys are not the default — only fall back to them with explicit user agreement.
+- No auth if "just me, localhost-only"; otherwise:
+  - **Humans: Okta OIDC (authorization-code flow).** Pin issuer / audience / client to env vars (`OKTA_ISSUER`, `OKTA_AUDIENCE`, `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET`).
+  - **M2M: Vercel OIDC.** Vercel-hosted callers present their auto-injected token (typically `VERCEL_OIDC_TOKEN` — verify the current env var name via `vercel:env-vars` before wiring); the receiver verifies the JWT against Vercel's published JWKS, with pinned `iss` and `aud`.
+  - Shared JWT-verifying middleware on every protected route, branching on the `iss` claim to pick the correct JWKS (Okta vs Vercel).
+  - Static API keys are not the default — fall back to them only for non-Vercel-hosted machine callers and only with explicit user agreement.
 - AI SDK v6 + AI Gateway for any LLM calls; default to a current Claude model unless the user specified otherwise
 - Zod schemas for every input/output, exported from a shared `schemas/` module — single source of truth for both the human form validation and the agent contract
 - `vercel` CLI for preview deploy first, promote to prod only on request

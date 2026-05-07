@@ -65,7 +65,7 @@ All findings live under `~/knowledge/private-companies/` (override with `$KNOWLE
    - Output **only the changelog entry** to the user — not the full brief. Mention the brief path so they can open it for context.
 
 Defaults for what counts as a change:
-- **Strict frontmatter fields**: funding, people, headcount, stage, investors, customers, competitors, status. Always reported.
+- **Strict frontmatter fields**: funding, arr, people, headcount, stage, investors, customers, competitors, status. Always reported.
 - **Cited-only source ledger**: only URLs actually cited in the brief land in `sources.jsonl` — not every URL searched. Keeps the ledger meaningful and small.
 
 ## Git workflow
@@ -173,6 +173,16 @@ funding:
       amount_usd: <int>
       lead: <Investor>
 
+arr:
+  value_usd: <int|null>     # most recent disclosed/reported ARR
+  as_of: <YYYY-MM>          # period the figure refers to
+  source: <press | self-reported | leaked | estimate>
+  confidence: <high | reported-unverified | rumor>
+  history:                  # prior data points, oldest first — enables growth-rate trend
+    - value_usd: <int>
+      as_of: <YYYY-MM>
+      source: <...>
+
 investors: [<Investor>, <Investor>]
 competitors: [<Co>, <Co>]
 customers: [<Co>, <Co>]   # publicly disclosed only
@@ -206,7 +216,7 @@ Founders (with prior-company signal). Key execs / recent senior hires. Headcount
 ## Funding & financials
 | Round | Date | Amount | Lead | Post-money |
 |-------|------|--------|------|------------|
-Total raised, notable investors, any disclosed revenue / ARR / growth rate.
+Total raised, notable investors. **ARR**: state the most recent figure with `as_of` period, source, and confidence label; if multiple data points exist, compute and call out the implied growth rate (e.g. "$40M ARR as of 2025-Q4, up from $12M in 2024-Q4 — ~3.3x YoY [n], reported, unverified"). If no public ARR figure exists, say so explicitly — don't omit the line.
 
 ## Market & competition
 Market, named competitors, positioning.
@@ -228,6 +238,7 @@ Prepend to `changelog.md`:
 ```
 ## <YYYY-MM-DD>
 - **Funding:** <round / amount / lead, or omit line if no change>
+- **ARR:** <prev → curr (+/- %, since prev_as_of), source, confidence label>
 - **People:** <hires, departures, role changes>
 - **Headcount:** <prev → curr (+/- %, since prev_date)>
 - **Product:** <new launches, pricing changes, positioning shifts>

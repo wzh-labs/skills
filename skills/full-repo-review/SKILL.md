@@ -370,6 +370,24 @@ Once the user confirms the plan (or a subset / reordering), work through the lis
 
 **Updating the plan as PRs land:** after each merged PR, append a line to `~/knowledge/repos/<slug>/plan.md` under that task: `- Shipped in #<PR>, merged <YYYY-MM-DD>.` If the work changed shape mid-flight (split into two PRs, dropped, deferred), note that on the task too. The plan file is the running record of the improvement effort across sessions.
 
+**Final summary after the last PR.** Once all PRs in the run have been created (plan exhausted, or the user stops the loop), print a single review-order summary in chat — **sorted by effort ascending (S → M → L)** so the smallest, fastest-to-review PRs go first. Ties within an effort bucket: severity (Blocker → Should-fix → Nit). The goal is to give the user a review queue, not a chronological log.
+
+```
+## PRs opened — review queue (low effort first)
+
+### S (<1h)
+- #<PR> · [Blocker|Should-fix|Nit] · <task title> — <PR URL>
+- ...
+
+### M (a few hours)
+- #<PR> · ...
+
+### L (half-day+)
+- #<PR> · ...
+```
+
+Omit any effort bucket that has no PRs. If a task was blocked or skipped, list it in a trailing `### Not shipped` section with the reason — don't silently drop it. This summary is chat-only; do not write it to `plan.md` (per-task shipping lines already live there).
+
 **Failure handling inside a task:**
 - Verification fails after the change → fix forward inside the same PR if obvious; otherwise revert local changes, mark the task as blocked in `plan.md`, and surface the blocker to the user before moving on.
 - `gh pr create` fails → print the error verbatim, leave the branch in place, do not retry blindly.

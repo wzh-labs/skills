@@ -38,3 +38,37 @@ gsm() {
     git branch -D "$branch"
   fi
 }
+
+athena() {
+  local sql="$1"
+  local profile="${ATHENA_PROFILE:-Vercel-Engineering-Athena-977805900156}"
+  local region="${ATHENA_REGION:-us-west-2}"
+  local results="${ATHENA_RESULTS:-s3://next-telemetry-results-us-west-2/}"
+
+  local qid
+  qid=$(aws athena start-query-execution \
+    --query-string "$sql" \
+    --result-configuration "OutputLocation=$results" \
+    --region "$region" --profile "$profile" \
+    --query QueryExecutionId --output text) || return 1
+
+  while true; do
+    local state
+    state=$(aws athena get-query-execution --query-execution-id "$qid" \
+      --region "$region" --profile "$profile" \
+      --query 'QueryExecution.Status.State' --output text)
+    case "$state" in
+      SUCCEEDED) break ;;
+      FAILED|CANCELLED)
+        aws athena get-query-execution --query-execution-id "$qid" \
+          --region "$region" --profile "$profile" \
+          --query 'QueryExecution.Status.StateChangeReason' --output text
+        return 1 ;;
+    esac
+    sleep 2
+  done
+
+  aws athena get-query-results --query-execution-id "$qid" \
+    --region "$region" --profile "$profile" \
+    --query 'ResultSet.Rows[*].Data[*].VarCharValue' --output table
+}

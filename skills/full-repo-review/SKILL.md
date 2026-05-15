@@ -314,17 +314,23 @@ Do NOT reorder by "what's easy to implement" — that produces a plan that ignor
 - **Source:** <link back to the §8 finding it came from — file:line>
 ```
 
-**Tag categories** (pick the one that best describes the change — exactly one tag per task, lowercase, in square brackets):
+**Tag categories** (pick the one that best describes the *purpose* of the change — exactly one tag per task, lowercase, in square brackets). Every change technically rearranges code, so **do not use a generic `[refactor]` tag** — pick the tag that names *why* the change exists:
 - `[security]` — vulnerability fix, hardening, secret removal, authn/authz fix
 - `[bug-fix]` — fixes incorrect behavior
 - `[performance]` — speed, memory, bundle size, query efficiency
-- `[refactor]` — restructure without changing behavior
+- `[reliability]` — error handling, retries, timeouts, crash/data-loss prevention
+- `[maintainability]` — reducing complexity, dead-code removal, breaking up god-files, clarifying APIs (use only when no more specific tag fits)
 - `[deps]` — dependency bumps, removals, lockfile changes
 - `[ci]` — CI/CD pipeline, GitHub Actions, build gates
 - `[test]` — adding or fixing tests
 - `[docs]` — README, comments, ADRs, inline docs
-- `[chore]` — config, formatting, tooling, housekeeping
+- `[a11y]` — accessibility fixes
+- `[i18n]` — localization / internationalization
+- `[dx]` — developer-experience improvements (scripts, local-dev ergonomics, error messages)
+- `[chore]` — config, formatting, tooling, housekeeping with no behavioral effect
 - `[feat]` — new functionality (rare in a review-driven plan; usually only for filling stated-but-missing pieces)
+
+If two tags could apply, pick the one closer to the user-visible outcome (e.g. an N+1 fix is `[performance]`, not `[maintainability]`; sanitizing input is `[security]`, not `[bug-fix]`).
 
 Keep PR scope tight: one task = one PR. If a finding is too big for one PR (e.g. "rewrite auth"), break it into staged tasks (1: add new path behind flag, 2: migrate callers, 3: remove old path) and list them as separate entries with `Depends on:`.
 

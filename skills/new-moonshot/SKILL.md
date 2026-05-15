@@ -18,7 +18,7 @@ Every proposal must satisfy *all* of these. If you can't make a candidate satisf
 3. **Orthogonal to existing moonshots.** Different problem, different audience, *and* different mechanism than every idea already in `~/knowledge/moonshots/ideas/`. "Same idea with a tweak" is not orthogonal. If the closest existing idea shares two of {problem, audience, mechanism}, pick a new candidate.
 4. **Has a plausible path to first revenue inside 90 days.** A clear pricing model (subscription, per-seat, per-action, % of value delivered) *and* a concrete first-customer path. Vapor like "we'll figure out monetization later" is disqualifying.
 5. **Defensible-enough.** Either a data moat, a distribution moat, a workflow moat (deep integration into a specific niche), or a quality moat (the agent does something competitors can't easily match). "It's a wrapper" with no moat is disqualifying — there are too many of those.
-6. **Has a concrete go-to-market path a solo founder can actually run.** A named channel (specific subreddit, Slack/Discord community, niche newsletter, vertical marketplace, conference, partner ecosystem, content-SEO niche, cold-outbound list the founder can build) plus a believable first-10-customer motion. "Go viral on Twitter" is not a GTM. If you can't name the channel and the motion, the candidate isn't ready.
+6. **Has a concrete, no-human-in-the-loop go-to-market path.** The acquisition motion must work *without* the founder personally cold-DMing prospects, hopping on demo calls, attending conferences, doing recorded feedback interviews, or any other 1:1 human-to-human channel. Allowed channels: programmatic SEO + content (LLM-generated or agent-maintained), a free tier or free tool that doubles as the funnel, agent-callable / API-first distribution (MCP servers, OpenAPI directories, agent marketplaces), product-led growth with viral mechanics built into the product, SEO-via-public-artifacts (the agent's output is itself indexable), integration into an existing distribution surface (Slack/Linear/GitHub/Shopify app marketplaces, Vercel/Stripe partner directories), or paid acquisition with a known CAC ceiling. Disallowed: cold email blasts the founder writes, manual outbound, demo calls, "30-minute discovery sessions", attending meetups. If you can't name the no-human channel and the motion, the candidate isn't ready. "Go viral on Twitter" is also not a GTM.
 
 ## Phase 0 — Survey existing ideas
 
@@ -48,7 +48,7 @@ Per global CLAUDE.md: research first, verify against current docs. Training data
    - Forum threads where professionals complain about a specific repetitive task by name.
    - Existing competitors who are deliberately *too generic* — leaving a wedge for a sharper, niche-vertical alternative.
    - Distribution channels that recently opened (e.g. agentic marketplaces, MCP server directories, specific SaaS marketplaces, vertical communities).
-   - Concrete GTM patterns that worked for recent solo-AI founders — what channel they used, what the first-10-customer motion looked like, what failed.
+   - Concrete *no-human-in-the-loop* GTM patterns that worked for recent solo-AI founders — programmatic SEO, free-tool funnels, marketplace listings, agent-callable distribution, viral product mechanics. Skip case studies whose acquisition was founder-led sales or cold outbound; those don't satisfy the constraint.
 2. **Search in parallel.** Issue all `WebSearch` calls in a single batch. Then `WebFetch` the highest-signal pages (founder retrospectives, forum threads with concrete complaints, primary-source product launches). Skip SEO-bait listicles and "Top 50 AI business ideas" posts.
 3. **Generate 5–8 candidate ideas internally** from the research. For each, write a one-line tagline plus a one-sentence note on which existing moonshot it's closest to and why it's still orthogonal.
 4. **Filter against the hard constraints above.** Discard anything that fails any of the five. Discard anything where the closest existing moonshot shares ≥2 of {problem, audience, mechanism}.
@@ -82,10 +82,10 @@ Format the pitch exactly like this:
 
 **Revenue model:** <pricing shape + a back-of-envelope first-year revenue scenario at modest scale>
 
-**Go-to-market:**
-- **First 10 customers:** <the specific named channel + the motion. e.g. "Cold-DM 200 plaintiff-side employment lawyers sourced from the AAJ member directory; offer 30 days free in exchange for a recorded feedback call." Concrete enough that the founder could start tomorrow.>
-- **Channel to 100 customers:** <the scalable channel that keeps working past founder-led sales. e.g. "Vertical-niche content SEO + a free agent-callable API tier that lawyers' assistants share internally." Name the channel; don't just say "content marketing.">
-- **Why this channel and not others:** <one sentence — what about the audience makes this channel work and others not>
+**Go-to-market (no humans in the loop):**
+- **First 10 customers:** <a mechanical channel — no cold DMs, no demo calls, no founder-led sales. e.g. "Free open-source CLI that solves the adjacent free version of the problem, with a paid hosted tier surfaced when the user hits a usage wall." Or "Programmatic SEO pages auto-generated for the top 500 long-tail queries in this niche, each linking to a free agent tool." Concrete enough that the founder could ship the funnel tomorrow without talking to anyone.>
+- **Channel to 100 customers:** <the scalable, agent-or-mechanism-driven channel. e.g. "Listing in the official MCP directory + a viral side-effect where the agent's output is publicly indexable and links back to the product." Name the channel; don't say "content marketing.">
+- **Why this channel and not others:** <one sentence — what about the audience or the product makes this no-human channel work and human-led channels unnecessary>
 
 **Why now:** <2 bullets — what shifted recently that makes this newly buildable or newly valuable. Cite sources>
 
@@ -142,15 +142,18 @@ _idea-XXXX · Created <YYYY-MM-DD>_
 <Pricing shape (subscription / per-seat / per-action / % of value). Back-of-envelope first-year revenue scenario at modest scale — explain the assumptions.>
 
 ## Go-to-market
-**First 10 customers:** <Named channel + concrete motion. e.g. "Cold-email 200 plaintiff-side employment lawyers from the AAJ directory; offer 30 days free for a recorded feedback call." Specific enough to start tomorrow.>
 
-**Channel to 100 customers:** <The scalable channel that keeps working past founder-led sales. Name it; explain the motion in one sentence.>
+**Constraint:** No humans in the loop. The founder does not cold-DM, demo, sell, or take feedback calls. Acquisition runs through programmatic content, free tools that double as funnels, agent-callable distribution surfaces, marketplace listings, integrations, viral product mechanics, or paid acquisition with a known CAC ceiling — and nothing else.
 
-**Channel to 1,000 customers:** <The flywheel — partnership, integration, marketplace, content-SEO compounding, paid acquisition with a known CAC ceiling, or referral mechanic. One sentence.>
+**First 10 customers:** <Mechanical channel + concrete motion. e.g. "Free open-source CLI that solves the adjacent free version of the problem; the paid hosted tier is surfaced when the user hits the free-tier wall." Or "Programmatic SEO pages auto-generated for the top 500 long-tail queries in this niche, each ending in a free agent tool." Specific enough to ship the funnel tomorrow without talking to anyone.>
 
-**Why this channel:** <One sentence — what about the audience makes this channel work and others fail.>
+**Channel to 100 customers:** <The scalable, mechanism-driven channel. Name it; explain the motion in one sentence. Examples: MCP directory listing + agent-indexable public output; Shopify/Slack/Linear app marketplace listing; partner-integration with a tool already in the audience's stack.>
 
-**Estimated CAC vs. LTV:** <Rough numbers with assumptions, or `(unknown — to validate with first 10)` if genuinely not pinnable yet.>
+**Channel to 1,000 customers:** <The compounding flywheel — programmatic-content SEO that grows with each new customer's data, a marketplace listing that earns its own ranking, a viral product mechanic, agent-distribution where downstream agents discover and call this one, or paid acquisition at a known CAC. One sentence.>
+
+**Why this channel:** <One sentence — what about the audience or product makes a no-human channel work, and why human-led GTM is genuinely unnecessary (not just inconvenient).>
+
+**Estimated CAC vs. LTV:** <Rough numbers with assumptions, or `(unknown — to validate against the first mechanical funnel)` if genuinely not pinnable yet.>
 
 ## Why now
 - <Recent capability or market shift #1, with source>

@@ -301,9 +301,10 @@ Do NOT reorder by "what's easy to implement" — that produces a plan that ignor
 **Each task entry** (numbered, in execution order):
 
 ```
-### N. <title — imperative, PR-friendly, <60 chars>>
+### N. [<tag>] <title — imperative, PR-friendly, <60 chars including tag>>
 
 - **Severity:** Blocker | Should-fix | Nit
+- **Tag:** <category — see tag list below>
 - **Scope:** <files/dirs touched, or "global config">
 - **Why:** <1 sentence — what breaks or degrades without this>
 - **Change:** <2–4 sentences — what the PR will actually do>
@@ -312,6 +313,18 @@ Do NOT reorder by "what's easy to implement" — that produces a plan that ignor
 - **Depends on:** <task N> or —
 - **Source:** <link back to the §8 finding it came from — file:line>
 ```
+
+**Tag categories** (pick the one that best describes the change — exactly one tag per task, lowercase, in square brackets):
+- `[security]` — vulnerability fix, hardening, secret removal, authn/authz fix
+- `[bug-fix]` — fixes incorrect behavior
+- `[performance]` — speed, memory, bundle size, query efficiency
+- `[refactor]` — restructure without changing behavior
+- `[deps]` — dependency bumps, removals, lockfile changes
+- `[ci]` — CI/CD pipeline, GitHub Actions, build gates
+- `[test]` — adding or fixing tests
+- `[docs]` — README, comments, ADRs, inline docs
+- `[chore]` — config, formatting, tooling, housekeeping
+- `[feat]` — new functionality (rare in a review-driven plan; usually only for filling stated-but-missing pieces)
 
 Keep PR scope tight: one task = one PR. If a finding is too big for one PR (e.g. "rewrite auth"), break it into staged tasks (1: add new path behind flag, 2: migrate callers, 3: remove old path) and list them as separate entries with `Depends on:`.
 
@@ -363,7 +376,7 @@ Once the user confirms the plan (or a subset / reordering), work through the lis
    Task <N> of <total> in the improvement plan (`~/knowledge/repos/<slug>/plan.md`).
    ```
 
-   Set the PR title to the task title from §10. Always pass `--base main` explicitly — do not rely on the remote's default-base inference. Do NOT add `Co-Authored-By` or `Generated with Claude Code` lines unless the user has asked for them — match what the repo's existing PRs do.
+   Set the PR title to the task title from §10, **including the leading `[<tag>]` annotation** (e.g. `[security] sanitize redirect target in auth callback`, `[performance] memoize expensive selector in dashboard`). The tag must match the task's `Tag:` field from §10 — do not invent new tags or drop the brackets. Always pass `--base main` explicitly — do not rely on the remote's default-base inference. Do NOT add `Co-Authored-By` or `Generated with Claude Code` lines unless the user has asked for them — match what the repo's existing PRs do.
 8. **Report back** in chat with the PR URL and a one-line status. Then stop and wait. Do not start the next task automatically — the user reviews, merges (or asks for revisions), and tells you to proceed.
 
 **When the user says "do them all" or "keep going without asking":** still pause briefly after each PR to print the URL, but proceed to the next task without waiting. Continue until: the plan is exhausted, a verification fails, a task expands beyond its scoped diff, the user interrupts, or `gh pr create` fails (rate limit, conflict, etc.). On any of those, stop and report.
